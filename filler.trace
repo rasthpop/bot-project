@@ -1,4 +1,6 @@
-seed = 3700
-py ./player22.py won
+seed = 793
+O: error on input
+X: error on input
+py ./player42main.py won
 Score:
-1AGAINST1
+138AGAINST189

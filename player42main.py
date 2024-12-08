@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 """
     This is an example of a bot for the 3rd project.
-    ...a pretty bad bot to be honest -_-
 """
-
+import math
 from logging import DEBUG, debug, getLogger
 
 # We use the debugger to print messages to stderr
@@ -29,12 +28,9 @@ def parse_field_info():
     Plateau 15 17:
     """
     l = input()
-
-    debug(f"Description of the field: {l}")
     _, height, width = l.split()
     height = int(height)
     width = int(width.rstrip(':'))
-    # debug(f'{height} {width}')
     return height, width
 def parse_field(height: int):
     """
@@ -83,12 +79,6 @@ def parse_field(height: int):
         l = input()
         debug(f"Field: {l}")
         field.append(l[4:])
-    #     if move is None:
-    #         c = l.lower().find("o" if player == 1 else "x")
-    #         if c != -1:
-    #             move = i - 1, c - 4
-    # assert move is not None
-    # debug(f'Full field: {field}')
     return field
 
 
@@ -107,26 +97,61 @@ def parse_figure():
     ..
     """
     l = input().split()
-    # debug(f"Piece: {l}")
+
     height, width = int(l[1]), int(l[2][:-1])
     figure = []
     for _ in range(height):
         l = input()
-        # debug(f"Piece: {l}")
         figure.append(l)
     return height, width, figure
 
-def possible_moves(field: list[str]) -> set[tuple[int, int]]:
+def possible_moves(field: list[str], fig: list[str], player:int) -> set[tuple[int, int]]:
     '''
     finds all of the free spaces on the board
     '''
-    free_spaces = set()
-    for x, row in enumerate(field):
-        for y, column in enumerate(row):
-            if column == '.':
-                free_spaces.add(x, y)
+    possible_cords = set()
 
+    h_fig = len(fig)
+    w_fig = len(fig[0])
 
+    fig_spaces = set()
+    enemy_spaces = set()
+    for y, row in enumerate(field):
+        for x, column in enumerate(row):
+            if column.lower() == 'o' if player == 1 else column.lower() == 'x':
+                fig_spaces.add((y, x))
+            elif column.lower() == 'x' if player == 1 else column.lower() == 'o':
+                enemy_spaces.add((y, x))
+
+    for field_y in range(len(field) - h_fig + 1):
+        for field_x in range(len(field[0]) - w_fig + 1):
+
+            fig_stars = set()
+            for y_fig in range(h_fig):
+                for x_fig in range(w_fig):
+                    if fig[y_fig][x_fig] == '*':
+                        fig_stars.add((y_fig + field_y, x_fig + field_x))
+            if len(fig_stars & fig_spaces) == 1 and len(fig_stars & enemy_spaces) == 0:
+                possible_cords.add((field_y, field_x))
+
+    return (possible_cords, enemy_spaces)
+
+def shortest_distance(moves_enemy: tuple[set[tuple[int, int]], set[tuple[int, int]]]):
+    '''finds the best move to place a figure closest to the enemy'''
+    def calculate_path(y1:int, x1:int, y2:int, x2:int):
+        '''calculates the shortest path between two points'''
+        return math.sqrt(((x1 - x2) ** 2) + (y1 - y2)** 2)
+
+    distance_min = math.inf
+    res = ''
+
+    for move in moves_enemy[0]:
+        for point in moves_enemy[1]:
+            distance = calculate_path(move[0], move[1], point[0], point[1])
+            if distance < distance_min:
+                distance_min = distance
+                res = move
+    return res
 
 def step(player: int):
     """
@@ -137,23 +162,15 @@ def step(player: int):
 
     move = None
     h_field, w_field = parse_field_info()
-    
+
     debug(f'Field: {h_field}, {w_field}')
     field = parse_field(h_field)
     h_fig, w_fig, figure = parse_figure()
     debug(f'piece info {h_fig}, {w_fig}, {figure}')
-
-    for j, row in enumerate(figure):
-        fig_x, fig_y = j, row.lower().find("*")
-
+    pos_move = shortest_distance(possible_moves(field, figure, player))
+    # pos_move = possible_moves(field, figure, player).pop()
     if move is None:
-        for i, row in enumerate(field):
-            c = row.lower().find("o" if player == 1 else "x")
-            if c != -1:
-                debug(f'c: {c}')
-                move = i-fig_x, c-fig_y
-                break
-                # move = i - 1, c - 4
+        move = pos_move
     assert move is not None
     debug(f'Full field: {field}')
     debug(f'MOVE_MOVE: {move}')
